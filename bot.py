@@ -7,11 +7,20 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiohttp import TCPConnector
 
 BOT_TOKEN = "8772614838:AAFMOZLj2CLrdoiE0KVPS0Mff_S1u0mnxiM"
 CSV_FILE = "schedule.csv"
 
-session = AiohttpSession(proxy="http://proxy.server:3128")
+# Настраиваем прокси через aiohttp напрямую в обход aiohttp-socks
+session = AiohttpSession()
+session._connector_type = TCPConnector
+session._connector_init = {"trust_env": True}
+
+# Передаем URL прокси прямо в запросы aiogram через переменную окружения
+os.environ["HTTP_PROXY"] = "http://proxy.server:3128"
+os.environ["HTTPS_PROXY"] = "http://proxy.server:3128"
+
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
@@ -44,7 +53,6 @@ def init_monthly_csv():
         current_date = (today + timedelta(days=i)).strftime("%Y-%m-%d")
         
         for p in SCHEDULE_TEMPLATE:
-            # Небольшая задержка для реалистичности
             status = "Задерживается" if (i % 5 == 2 and p["passenger"] == "Максим") else "По расписанию"
             
             rows.append([
@@ -66,7 +74,6 @@ def init_monthly_csv():
 init_monthly_csv()
 
 def get_person_schedule(person_name, date_str):
-    """Возвращает рейсы только конкретного человека"""
     if not os.path.exists(CSV_FILE):
         return "⚠️ Файл с расписанием не найден."
 
@@ -97,7 +104,6 @@ def get_person_schedule(person_name, date_str):
     return text
 
 def get_full_schedule(date_str):
-    """Возвращает полное расписание на весь день (с утра до ночи)"""
     if not os.path.exists(CSV_FILE):
         return "⚠️ Файл с расписанием не найден."
 
@@ -127,7 +133,6 @@ def get_full_schedule(date_str):
     return text
 
 def get_main_keyboard(date_str):
-    """Клавиатура с кнопками для каждого человека"""
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="👤 Сергей", callback_data=f"user_Сергей_{date_str}"),
