@@ -12,11 +12,10 @@ import aiohttp
 BOT_TOKEN = "8772614838:AAFMOZLj2CLrdoiE0KVPS0Mff_S1u0mnxiM"
 CSV_FILE = "schedule.csv"
 
-# Возвращаем системный прокси PythonAnywhere
+# Системный прокси PythonAnywhere
 os.environ["HTTP_PROXY"] = "http://proxy.server:3128"
 os.environ["HTTPS_PROXY"] = "http://proxy.server:3128"
 
-# Сессия aiohttp с поддержкой прокси из переменных окружения
 class PythonAnywhereSession(AiohttpSession):
     async def create_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
@@ -30,7 +29,7 @@ session = PythonAnywhereSession()
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
-# Только вылеты ИЗ Москвы / СПб / Краснодара в страны назначения
+# Только прямые вылеты ИЗ Москвы / СПб / Краснодара
 SCHEDULE_TEMPLATE = [
     {"time_slot": "🌅 Утро", "passenger": "Сергей", "route": "Москва / СПб → Лондон", "airline": "British Airways", "flight": "BA-879", "dep": "08:30", "arr": "11:15"},
     {"time_slot": "🌅 Утро", "passenger": "Дарья", "route": "Москва / СПб → Корфу", "airline": "Aegean Airlines", "flight": "A3-402", "dep": "10:15", "arr": "14:40"},
@@ -96,7 +95,8 @@ def get_main_keyboard(date_str):
     ])
     return kb
 
-@dp.message(Command("start"), Command("flights"))
+# ИСПРАВЛЕНО: обе команды переданы внутрь одного объекта Command(...)
+@dp.message(Command("start", "flights"))
 async def start_handler(message: types.Message):
     today_str = datetime.now().strftime("%Y-%m-%d")
     await message.answer("👋 Выбери пассажира, чтобы узнать время вылета:", reply_markup=get_main_keyboard(today_str))
@@ -121,7 +121,6 @@ async def process_date_callback(callback: types.CallbackQuery):
 
 async def main():
     print("Бот успешно запущен!")
-    # Уменьшаем время ожидания long polling до 10 сек, чтобы прокси не разрывал соединение
     await dp.start_polling(bot, polling_timeout=10)
 
 if __name__ == "__main__":
