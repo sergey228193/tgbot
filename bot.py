@@ -5,18 +5,15 @@ import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.client.session.aiohttp import AiohttpSession
 
 BOT_TOKEN = "8772614838:AAFMOZLj2CLrdoiE0KVPS0Mff_S1u0mnxiM"
 CSV_FILE = "schedule.csv"
 
-# Настройка прокси для работы на бесплатном тарифе PythonAnywhere
-session = AiohttpSession(proxy="http://proxy.server:3128")
-bot = Bot(token=BOT_TOKEN, session=session)
+# Бот автоматически использует переменные окружения прокси от PythonAnywhere
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 def init_csv():
-    # Создаем/перезаписываем файл с расписанием на Сегодня и Завтра
     rows = [
         ["Day", "Passenger", "Route", "Airline", "Flight", "Departure", "Arrival", "Status"],
         # СЕГОДНЯ
