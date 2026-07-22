@@ -7,20 +7,26 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.client.session.aiohttp import AiohttpSession
-from aiohttp import TCPConnector
+import aiohttp
 
 BOT_TOKEN = "8772614838:AAFMOZLj2CLrdoiE0KVPS0Mff_S1u0mnxiM"
 CSV_FILE = "schedule.csv"
 
-# Настраиваем прокси через aiohttp напрямую в обход aiohttp-socks
-session = AiohttpSession()
-session._connector_type = TCPConnector
-session._connector_init = {"trust_env": True}
-
-# Передаем URL прокси прямо в запросы aiogram через переменную окружения
+# Включаем прокси PythonAnywhere через переменные окружения
 os.environ["HTTP_PROXY"] = "http://proxy.server:3128"
 os.environ["HTTPS_PROXY"] = "http://proxy.server:3128"
 
+# Кастомная сессия, заставляющая aiohttp доверять переменным окружения (trust_env=True)
+class PythonAnywhereSession(AiohttpSession):
+    async def create_session(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession(
+                trust_env=True,
+                json_serialize=self.json_dumps,
+            )
+        return self._session
+
+session = PythonAnywhereSession()
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
