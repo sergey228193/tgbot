@@ -29,12 +29,27 @@ session = PythonAnywhereSession()
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
-# Только прямые вылеты ИЗ Москвы / СПб / Краснодара
+# ПОЛНЫЙ СПИСОК РЕЙСОВ (включая ночные)
 SCHEDULE_TEMPLATE = [
-    {"time_slot": "🌅 Утро", "passenger": "Сергей", "route": "Москва / СПб → Лондон", "airline": "British Airways", "flight": "BA-879", "dep": "08:30", "arr": "11:15"},
-    {"time_slot": "🌅 Утро", "passenger": "Дарья", "route": "Москва / СПб → Корфу", "airline": "Aegean Airlines", "flight": "A3-402", "dep": "10:15", "arr": "14:40"},
-    {"time_slot": "☀️ День", "passenger": "Валерия", "route": "Москва / СПб → Бангкок", "airline": "Qatar Airways", "flight": "QR-338", "dep": "14:20", "arr": "03:50 (+1)"},
-    {"time_slot": "🌆 Вечер", "passenger": "Максим", "route": "Москва / Краснодар → Бангкок", "airline": "Aeroflot", "flight": "SU-270", "dep": "19:40", "arr": "08:30 (+1)"},
+    # --- СЕРГЕЙ (Лондон) ---
+    {"time_slot": "🌅 Утро", "passenger": "Сергей", "route": "Москва (SVO) → Лондон (LHR)", "airline": "British Airways", "flight": "BA-879", "dep": "08:30", "arr": "11:15"},
+    {"time_slot": "☀️ День", "passenger": "Сергей", "route": "СПб (LED) → Лондон (LHR)", "airline": "Wizz Air", "flight": "W9-812", "dep": "14:10", "arr": "16:45"},
+    {"time_slot": "🌙 Ночь", "passenger": "Сергей", "route": "Краснодар (KRR) → Лондон (STN)", "airline": "Ryanair", "flight": "FR-204", "dep": "01:25", "arr": "04:30"},
+
+    # --- ДАРЬЯ (Корфу) ---
+    {"time_slot": "🌅 Утро", "passenger": "Дарья", "route": "Москва (DME) → Корфу (CFU)", "airline": "Aegean Airlines", "flight": "A3-402", "dep": "10:15", "arr": "14:40"},
+    {"time_slot": "🌆 Вечер", "passenger": "Дарья", "route": "СПб (LED) → Корфу (CFU)", "airline": "Sky Express", "flight": "GQ-210", "dep": "18:50", "arr": "22:15"},
+    {"time_slot": "🌙 Ночь", "passenger": "Дарья", "route": "Краснодар (KRR) → Корфу (CFU)", "airline": "Ellinair", "flight": "EL-901", "dep": "02:40", "arr": "05:55"},
+
+    # --- ВАЛЕРИЯ (Бангкок) ---
+    {"time_slot": "☀️ День", "passenger": "Валерия", "route": "Москва (SVO) → Бангкок (BKK)", "airline": "Qatar Airways", "flight": "QR-338", "dep": "14:20", "arr": "03:50 (+1)"},
+    {"time_slot": "🌆 Вечер", "passenger": "Валерия", "route": "СПб (LED) → Бангкок (BKK)", "airline": "Emirates", "flight": "EK-176", "dep": "17:45", "arr": "07:10 (+1)"},
+    {"time_slot": "🌙 Ночь", "passenger": "Валерия", "route": "Краснодар (KRR) → Бангкок (BKK)", "airline": "Flydubai", "flight": "FZ-982", "dep": "23:55", "arr": "13:20 (+1)"},
+
+    # --- МАКСИМ (Бангкок) ---
+    {"time_slot": "🌆 Вечер", "passenger": "Максим", "route": "Москва (SVO) → Бангкок (BKK)", "airline": "Aeroflot", "flight": "SU-270", "dep": "19:40", "arr": "08:30 (+1)"},
+    {"time_slot": "🌙 Ночь", "passenger": "Максим", "route": "СПб (LED) → Бангкок (BKK)", "airline": "Etihad Airways", "flight": "EY-68", "dep": "23:10", "arr": "12:05 (+1)"},
+    {"time_slot": "🌙 Ночь", "passenger": "Максим", "route": "Краснодар (KRR) → Бангкок (BKK)", "airline": "Turkish Airlines", "flight": "TK-481", "dep": "03:15", "arr": "18:40 (+1)"},
 ]
 
 def init_monthly_csv():
@@ -68,7 +83,7 @@ def get_person_schedule(person_name, date_str):
     text += "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n"
     for f in flights:
         status_icon = "🟢" if f.get('Status') == "По расписанию" else "🟡"
-        text += f"📍 **{f.get('Route', '')}**\n✈️ Рейс: {f.get('Airline', '')} ({f.get('Flight', '')})\n⏰ Вылет: **{f.get('Departure', '')}**\nСтатус: {status_icon} {f.get('Status', '')}\n\n"
+        text += f"📍 **{f.get('Route', '')}**\n🕒 Слот: {f.get('TimeSlot', '')}\n✈️ Рейс: {f.get('Airline', '')} ({f.get('Flight', '')})\n⏰ Вылет: **{f.get('Departure', '')}** | Прибытие: **{f.get('Arrival', '')}**\nСтатус: {status_icon} {f.get('Status', '')}\n\n"
     return text
 
 def get_full_schedule(date_str):
@@ -83,7 +98,7 @@ def get_full_schedule(date_str):
     text = f"📋 **ВСЕ ВЫЛЕТЫ** ({formatted_date})\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n"
     for f in flights:
         status_icon = "🟢" if f.get('Status') == "По расписанию" else "🟡"
-        text += f"👤 **{f.get('Passenger', '')}**\n✈️ {f.get('Route', '')} | {f.get('Flight', '')} ({status_icon})\n"
+        text += f"👤 **{f.get('Passenger', '')}** ({f.get('TimeSlot', '')})\n✈️ {f.get('Route', '')} | {f.get('Flight', '')} ({f.get('Departure', '')}) {status_icon}\n\n"
     return text
 
 def get_main_keyboard(date_str):
@@ -95,7 +110,6 @@ def get_main_keyboard(date_str):
     ])
     return kb
 
-# ИСПРАВЛЕНО: обе команды переданы внутрь одного объекта Command(...)
 @dp.message(Command("start", "flights"))
 async def start_handler(message: types.Message):
     today_str = datetime.now().strftime("%Y-%m-%d")
