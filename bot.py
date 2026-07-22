@@ -10,19 +10,26 @@ from aiogram.client.session.aiohttp import AiohttpSession
 BOT_TOKEN = "8772614838:AAFMOZLj2CLrdoiE0KVPS0Mff_S1u0mnxiM"
 CSV_FILE = "schedule.csv"
 
-# Настройка прокси для работы на бесплатном тарифе PythonAnywhere
+# Настройка прокси для бесплатного тарифа PythonAnywhere
 session = AiohttpSession(proxy="http://proxy.server:3128")
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
-# Создаем базовый CSV с расписанием, если его нет
-if not os.path.exists(CSV_FILE):
+def init_csv():
+    # Создаем/перезаписываем файл с расписанием всех рейсов
+    rows = [
+        ["Passenger", "Route", "Airline", "Flight", "Departure", "Arrival", "Status"],
+        ["Сергей", "Москва / СПб → Лондон", "British Airways", "BA-879", "09:30", "14:15", "По расписанию"],
+        ["Дарья", "Москва / СПб → Корфу", "Aegean Airlines", "A3-402", "11:20", "15:45", "По расписанию"],
+        ["Валерия", "Москва / СПб → Бангкок", "Qatar Airways", "QR-338", "18:00", "07:30 (+1)", "По расписанию"],
+        ["Максим", "Москва / Краснодар → Бангкок", "Aeroflot", "SU-270", "22:10", "11:00 (+1)", "Задерживается"]
+    ]
     with open(CSV_FILE, mode="w", encoding="utf-8", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["Route", "Airline", "Flight", "Departure", "Arrival", "Status"])
-        writer.writerow(["Москва - Сочи", "Аэрофлот", "SU-112", "10:00", "13:30", "По расписанию"])
-        writer.writerow(["СПб - Москва", "S7 Airlines", "S7-1020", "12:15", "13:45", "Задерживается"])
-        writer.writerow(["Москва - Стамбул", "Turkish Airlines", "TK-414", "15:00", "20:00", "По расписанию"])
+        writer.writerows(rows)
+
+# При запуске проверяем или создаем актуальный CSV
+init_csv()
 
 def get_flights_text():
     if not os.path.exists(CSV_FILE):
@@ -37,12 +44,13 @@ def get_flights_text():
     if not flights:
         return "✈️ На данный момент доступных рейсов нет."
 
-    text = "🛫 **Актуальное расписание рейсов:**\n\n"
+    text = "🛫 **Актуальное расписание всех пассажиров:**\n\n"
     for f in flights:
         status_icon = "🟢" if f.get('Status') == "По расписанию" else "🟡"
         text += (
-            f"📍 **{f.get('Route', '')}**\n"
-            f"✈️ Авиакомпания: {f.get('Airline', '')} ({f.get('Flight', '')})\n"
+            f"👤 **{f.get('Passenger', '')}**\n"
+            f"📍 Маршрут: **{f.get('Route', '')}**\n"
+            f"✈️ Рейс: {f.get('Airline', '')} ({f.get('Flight', '')})\n"
             f"⏰ Вылет: {f.get('Departure', '')} | Прилет: {f.get('Arrival', '')}\n"
             f"Статус: {status_icon} {f.get('Status', '')}\n"
             f"{'—'*25}\n"
@@ -56,7 +64,7 @@ async def start_handler(message: types.Message):
     ])
     await message.answer(
         f"Привет, {message.from_user.first_name}! 👋\n\n"
-        "Я бот для отслеживания авиарейсов.\n"
+        "Я бот для отслеживания персональных авиарейсов.\n"
         "Нажми кнопку ниже или напиши /flights, чтобы узнать расписание.",
         reply_markup=kb,
         parse_mode="Markdown"
