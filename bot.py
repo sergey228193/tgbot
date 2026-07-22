@@ -12,15 +12,25 @@ import aiohttp
 BOT_TOKEN = "8772614838:AAFMOZLj2CLrdoiE0KVPS0Mff_S1u0mnxiM"
 CSV_FILE = "schedule.csv"
 
-# Очищаем переменные окружения, чтобы бот работал напрямую
-os.environ.pop("HTTP_PROXY", None)
-os.environ.pop("HTTPS_PROXY", None)
+# Возвращаем системный прокси PythonAnywhere
+os.environ["HTTP_PROXY"] = "http://proxy.server:3128"
+os.environ["HTTPS_PROXY"] = "http://proxy.server:3128"
 
-session = AiohttpSession()
+# Сессия aiohttp с поддержкой прокси из переменных окружения
+class PythonAnywhereSession(AiohttpSession):
+    async def create_session(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession(
+                trust_env=True,
+                json_serialize=self.json_dumps,
+            )
+        return self._session
+
+session = PythonAnywhereSession()
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
-# ИСПРАВЛЕНО: Только вылеты ИЗ Москвы/СПб в страны назначения
+# Только вылеты ИЗ Москвы / СПб / Краснодара в страны назначения
 SCHEDULE_TEMPLATE = [
     {"time_slot": "🌅 Утро", "passenger": "Сергей", "route": "Москва / СПб → Лондон", "airline": "British Airways", "flight": "BA-879", "dep": "08:30", "arr": "11:15"},
     {"time_slot": "🌅 Утро", "passenger": "Дарья", "route": "Москва / СПб → Корфу", "airline": "Aegean Airlines", "flight": "A3-402", "dep": "10:15", "arr": "14:40"},
@@ -35,7 +45,6 @@ def init_monthly_csv():
     for i in range(30):
         current_date = (today + timedelta(days=i)).strftime("%Y-%m-%d")
         for p in SCHEDULE_TEMPLATE:
-            # Статус задерживается только для Максима
             status = "Задерживается" if (i % 5 == 2 and p["passenger"] == "Максим") else "По расписанию"
             rows.append([current_date, p["time_slot"], p["passenger"], p["route"], p["airline"], p["flight"], p["dep"], p["arr"], status])
 
@@ -111,8 +120,9 @@ async def process_date_callback(callback: types.CallbackQuery):
     await callback.answer()
 
 async def main():
-    print("Бот запущен!")
-    await dp.start_polling(bot)
+    print("Бот успешно запущен!")
+    # Уменьшаем время ожидания long polling до 10 сек, чтобы прокси не разрывал соединение
+    await dp.start_polling(bot, polling_timeout=10)
 
 if __name__ == "__main__":
     asyncio.run(main())
